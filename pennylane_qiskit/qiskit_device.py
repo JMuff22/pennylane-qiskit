@@ -178,10 +178,7 @@ class QiskitDevice(QubitDevice, abc.ABC):
 		self._capabilities["returns_state"] = self._is_state_backend
 
 		# Perform validation against backend
-		backend_qubits = self.backend.configuration().n_qubits
-		# if the backend has a set number of qubits, ensure wires doesn't exceed (some simulators have n_qubits=None)
-		if backend_qubits and len(self.wires) > int(backend_qubits):
-			raise ValueError(f"Backend '{backend}' supports maximum {backend_qubits} wires")
+		self.validate_wires_against_backend()
 
 		# Initialize inner state
 		self.reset()
