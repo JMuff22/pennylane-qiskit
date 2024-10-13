@@ -1,10 +1,90 @@
+# Copyright 2021-2024 Xanadu Quantum Technologies Inc.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+r"""
+This module contains tests qiskit devices for PennyLane IBMQ devices.
+"""
+from unittest.mock import Mock
+
 import numpy as np
 import pytest
 
+from qiskit_aer import noise
+from qiskit.providers import BackendV1, BackendV2
+from qiskit_ibm_runtime.fake_provider import FakeManila, FakeManilaV2
+
 import pennylane as qml
 from pennylane_qiskit import AerDevice
-from pennylane_qiskit.qiskit_device import QiskitDevice
-from qiskit_aer import noise
+from pennylane_qiskit.qiskit_device_legacy import QiskitDeviceLegacy
+
+# pylint: disable=protected-access, unused-argument, too-few-public-methods
+
+
+class Configuration:
+    def __init__(self, n_qubits, backend_name):
+        self.n_qubits = n_qubits
+        self.backend_name = backend_name
+        self.noise_model = None
+        self.method = "placeholder"
+
+    def get(self, attribute, default=None):
+        return getattr(self, attribute, default)
+
+
+class MockedBackend(BackendV2):
+    def __init__(self, num_qubits=10, name="mocked_backend"):
+        self._options = Configuration(num_qubits, name)
+        self._service = "SomeServiceProvider"
+        self.name = name
+        self._target = Mock()
+        self._target.num_qubits = num_qubits
+
+    def set_options(self, noise_model):
+        self.options.noise_model = noise_model
+
+    def _default_options(self):
+        return {}
+
+    def max_circuits(self):
+        return 10
+
+    def run(self, *args, **kwargs):
+        return None
+
+    @property
+    def target(self):
+        return self._target
+
+
+class MockedBackendLegacy(BackendV1):
+    def __init__(self, num_qubits=10, name="mocked_backend_legacy"):
+        self._configuration = Configuration(num_qubits, backend_name=name)
+        self._service = "SomeServiceProvider"
+        self._options = self._default_options()
+
+    def configuration(self):
+        return self._configuration
+
+    def _default_options(self):
+        return {}
+
+    def run(self, *args, **kwargs):
+        return None
+
+    @property
+    def options(self):
+        return self._options
+
 
 test_transpile_options = [
     {},
@@ -13,6 +93,45 @@ test_transpile_options = [
 ]
 
 test_device_options = [{}, {"optimization_level": 3}, {"optimization_level": 1}]
+backend = MockedBackend()
+legacy_backend = MockedBackendLegacy()
+
+
+class TestSupportForV1andV2:
+    """Tests compatibility with BackendV1 and BackendV2"""
+
+    @pytest.mark.parametrize(
+        "dev_backend",
+        [
+            legacy_backend,
+            backend,
+        ],
+    )
+    def test_v1_and_v2_mocked(self, dev_backend):
+        """Test that device initializes with no error mocked"""
+        dev = qml.device("qiskit.aer", wires=10, backend=dev_backend)
+        assert dev._backend == dev_backend
+
+    @pytest.mark.parametrize(
+        "dev_backend",
+        [
+            FakeManila(),
+            FakeManilaV2(),
+        ],
+    )
+    def test_v1_and_v2_manila(self, dev_backend):
+        """Test that device initializes with no error with V1 and V2 backends by Qiskit"""
+        dev = qml.device("qiskit.aer", wires=5, backend=dev_backend)
+
+        @qml.qnode(dev)
+        def circuit(x):
+            qml.RX(x, wires=[0])
+            qml.CNOT(wires=[0, 1])
+            return qml.sample(qml.PauliZ(0))
+
+        res = circuit(np.pi / 2)
+        assert isinstance(res, np.ndarray)
+        assert np.shape(res) == (1024,)
 
 
 class TestProbabilities:
@@ -56,15 +175,15 @@ class TestAnalyticWarningHWSimulator:
         with pytest.warns(UserWarning) as record:
             dev = qml.device("qiskit.aer", backend="aer_simulator", wires=2, shots=None)
 
-        # check that only one warning was raised
-        assert len(record) == 1
-        # check that the message matches
         assert (
-            record[0].message.args[0] == "The analytic calculation of "
+            record[-1].message.args[0] == "The analytic calculation of "
             "expectations, variances and probabilities is only supported on "
-            "statevector backends, not on the {}. Such statistics obtained from this "
-            "device are estimates based on samples.".format(dev.backend.name)
+            f"statevector backends, not on the {dev.backend.name}. Such statistics obtained from this "
+            "device are estimates based on samples."
         )
+
+        # One warning raised about analytic calculations.
+        assert len(record) == 1
 
     @pytest.mark.parametrize("method", ["unitary", "statevector"])
     def test_no_warning_raised_for_software_backend_analytic_expval(
@@ -73,9 +192,9 @@ class TestAnalyticWarningHWSimulator:
         """Tests that no warning is raised if the analytic attribute is true on
         statevector simulators when calculating the expectation"""
 
-        dev = qml.device("qiskit.aer", backend="aer_simulator", method=method, wires=2, shots=None)
+        _ = qml.device("qiskit.aer", backend="aer_simulator", method=method, wires=2, shots=None)
 
-        # check that no warnings were raised
+        # These simulators are being deprecated. Warnings are raised in Qiskit <1.1
         assert len(recwarn) == 0
 
 
@@ -104,7 +223,7 @@ class TestBatchExecution:
 
     with qml.tape.QuantumTape() as tape1:
         qml.PauliX(wires=0)
-        qml.expval(qml.PauliZ(wires=0)), qml.expval(qml.PauliZ(wires=1))
+        _ = qml.expval(qml.PauliZ(wires=0)), qml.expval(qml.PauliZ(wires=1))
 
     with qml.tape.QuantumTape() as tape2:
         qml.PauliX(wires=0)
@@ -116,12 +235,12 @@ class TestBatchExecution:
         called and not the general execute method."""
 
         dev = device(2)
-        spy = mocker.spy(QiskitDevice, "execute")
+        spy = mocker.spy(QiskitDeviceLegacy, "execute")
 
         tapes = [self.tape1] * n_tapes
         dev.batch_execute(tapes)
 
-        # Check that QiskitDevice.execute was not called
+        # Check that QiskitDeviceLegacyLegacy.execute was not called
         assert spy.call_count == 0
 
     @pytest.mark.parametrize("n_tapes", [1, 2, 3])
@@ -130,7 +249,7 @@ class TestBatchExecution:
         times."""
 
         dev = device(2)
-        spy = mocker.spy(QiskitDevice, "reset")
+        spy = mocker.spy(QiskitDeviceLegacy, "reset")
 
         tapes = [self.tape1] * n_tapes
         dev.batch_execute(tapes)
@@ -188,7 +307,7 @@ class TestBatchExecution:
         """Tests that the number of executions are recorded correctly.."""
         dev = device(2)
         tapes = [self.tape1, self.tape2]
-        res = dev.batch_execute(tapes)
+        _ = dev.batch_execute(tapes)
         assert dev.num_executions == 1
 
     def test_barrier_tape(self, device, tol):

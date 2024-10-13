@@ -1,22 +1,8 @@
-# Release 0.36.0-dev
+# Release 0.39.0-dev
 
 ### New features since last release
 
-* Support is added for using the plugin devices with Qiskit 1.0. As the backend provider ``qiskit.BasicAer`` 
-  is no longer supported by Qiskit in 1.0, this added support does not extend to the ``"qiskit.aer"`` device. 
-  Instead, a ``"qiskit.basicsim"`` device is added, with the new Qiskit implementation of a Python simulator 
-  device, ``BasicSimulator``, as the backend.
-  [(#493)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/493)
-
 ### Improvements 🛠
-
-* Following updates to allow device compatibility with Qiskit 1.0, the version of `qiskit-ibm-runtime` is 
-  no longer capped.
-  [(#508)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/508)
-
-* The test suite now runs with the most recent `qiskit` and `qiskit-ibm-runtime`, and well as with 
-  `'qiskit==0.45'` and `qiskit-ibm-runtime<0.21` to monitor backward-compatibility.
-  [(#508)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/508)
 
 ### Breaking changes 💔
 
@@ -29,7 +15,122 @@
 ### Contributors ✍️
 
 This release contains contributions from (in alphabetical order):
+
+---
+# Release 0.38.1
+
+### Bug fixes 🐛
+
+* Due to the removal of the `Session` and `Backend` keywords in the 0.30 release of `qiskit-ibm-runtime`, the PennyLane-Qiskit
+  plugin now pins to `qiskit-ibm-runtime<=0.29`.
+  [(#587)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/587)
+
+### Contributors ✍️
+
+This release contains contributions from (in alphabetical order):
+
+Austin Huang
+Mudit Pandey
+
+---
+# Release 0.38.0
+
+### New features since last release
+
+* Added support for converting Qiskit noise models to
+  PennyLane ``NoiseModels`` using ``load_noise_model``.
+  [(#577)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/577)
+  [(#578)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/578)
+
+* Qiskit Sessions can now be used for the ``qiskit.remote`` device with the ``qiskit_session`` context
+  manager.
+  [(#551)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/551)
+
+### Improvements 🛠
+
+* Qiskit Runtime Primitives are supported by the ``qiskit.remote`` device. Circuits ran using the ``qiskit.remote``
+  device will automatically call the SamplerV2 and EstimatorV2 primitives appropriately. Additionally, runtime options can be passed as keyword arguments directly to the ``qiskit.remote`` device.
+  [(#513)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/513)
+
+### Breaking changes 💔
+
+* Support has been removed for Qiskit versions below 0.46. The minimum required version for Qiskit is now 1.0. 
+  If you want to continue to use older versions of Qiskit with the plugin, please use version 0.36 of 
+  the Pennylane-Qiskit plugin. 
+  [(#536)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/536)
+
+* The test suite no longer runs for Qiskit versions below 0.46.
+  [(#536)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/536)
+
+* The ``qiskit.basicaer`` device has been removed because it is not supported for versions of Qiskit above 0.46.
+  [(#546)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/546)
+
+* The IBM quantum devices, ``qiskit.ibmq``, ``qiskit.ibmq.circuit_runner`` and ``qiskit.ibmq.sampler``, have been removed due to deprecations of the IBMProvider and the cloud simulator "ibmq_qasm_simulator".
+  [(#550)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/550)
+
+### Documentation 📝
+
+* The Pennylane-Qiskit plugin page has been updated to reflect the changes in both the plugin's 
+capabilities and Qiskit.
+  [#563](https://github.com/PennyLaneAI/pennylane-qiskit/pull/563)
+
+### Contributors ✍️
+
+This release contains contributions from (in alphabetical order):
+
+Utkarsh Azad
 Lillian M. A. Frederiksen
+Austin Huang
+
+---
+# Release 0.37.0
+
+### Improvements 🛠
+
+* Updated `load_qasm` to take the optional kwarg `measurements` which get performed at the end of the loaded circuit and `load_qasm` can now detect mid-circuit measurements from `qasm`.
+[(#555)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/555)
+
+* Improvements have been made to load circuits with `SwitchCaseOp` gates with default case.
+  [(#514)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/514)
+
+### Contributors ✍️
+
+This release contains contributions from (in alphabetical order):
+Utkarsh Azad
+Lillian M. A. Frederiksen
+Austin Huang
+Mashhood Khan
+
+---
+# Release 0.36.0
+
+### New features since last release
+
+* Support is added for using the plugin devices with Qiskit 1.0. As the backend provider ``qiskit.BasicAer`` 
+  is no longer supported by Qiskit in 1.0, this added support does not extend to the ``"qiskit.aer"`` device. 
+  Instead, a ``"qiskit.basicsim"`` device is added, with the new Qiskit implementation of a Python simulator 
+  device, ``BasicSimulator``, as the backend.
+  [(#493)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/493)
+
+* Backwards compatibility with Qiskit BackendV2 has now been implemented. Previously, only backends of type
+  BackendV1 were supported but now users can choose to use BackendV2 as well.
+  [(#514)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/514)
+
+### Improvements 🛠
+
+* Following updates to allow device compatibility with Qiskit 1.0, the version of `qiskit-ibm-runtime` is 
+  no longer capped.
+  [(#508)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/508)
+
+* The test suite now runs with the most recent `qiskit` and `qiskit-ibm-runtime`, and well as with 
+  `'qiskit==0.45'` and `qiskit-ibm-runtime<0.21` to monitor backward-compatibility.
+  [(#508)](https://github.com/PennyLaneAI/pennylane-qiskit/pull/508)
+
+### Contributors ✍️
+
+This release contains contributions from (in alphabetical order):
+Lillian M. A. Frederiksen
+Austin Huang
 
 ---
 # Release 0.35.1
